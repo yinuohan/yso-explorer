@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YSO Disk Explorer</title>
+<link rel="stylesheet" href="style.css">
+<script src="plotly.min.js"></script>
+<script src="data.js"></script>
+<!-- Google Analytics (same property as yinuohan.github.io; only on the published site, not when opened from disk) -->
+<script>
+if (location.protocol.indexOf('http') === 0 && !/^(localhost|127[.])/.test(location.hostname)) {
+  var s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=G-PQSX7VEK1M';
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments); };
+  gtag('js', new Date()); gtag('config', 'G-PQSX7VEK1M');
+}
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><h1>YSO Disk Explorer</h1><span id="meta"></span></div>
+  <nav id="tabs" class="seg big">
+    <button data-tab="gallery" class="on">Gallery</button>
+    <button data-tab="sky">Sky</button>
+    <button data-tab="programs">Programs</button>
+    <button data-tab="plot">Plot</button>
+    <button data-tab="regions">Completeness</button>
+    <button data-tab="table">Table</button>
+  </nav>
+  <div class="sp"></div>
+  <label class="switch" title="dark mode"><input type="checkbox" id="darkmode"> dark</label>
+</header>
+<div id="wrap">
+  <aside id="filters">
+    <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search name, alias, ID"></div>
+    <div id="count"></div>
+    <details open><summary>Class</summary><div id="f-class" class="pills"></div></details>
+    <details open><summary>Region <span class="mini"><a href="#" id="reg-all">all</a> · <a href="#" id="reg-none">none</a></span></summary>
+      <div id="f-region" class="list"></div></details>
+    <details open><summary>Features</summary><div id="f-feat" class="list"></div></details>
+    <details open><summary>Named programs</summary><div id="f-prog" class="list"></div></details>
+    <details><summary>Data</summary>
+      <label class="switch"><input type="checkbox" id="f-img"> has images</label>
+      <label class="switch"><input type="checkbox" id="f-census"> census members only</label>
+      <label class="switch"><input type="checkbox" id="f-detailed"> detailed tier only</label>
+      <label class="switch"><input type="checkbox" id="f-mm"> has mm flux (survey)</label>
+      <label class="switch"><input type="checkbox" id="f-alma"> ALMA observed</label>
+      <label class="switch"><input type="checkbox" id="f-almapub"> ALMA public</label>
+      <label class="switch"><input type="checkbox" id="f-almabib"> ALMA published</label>
+      <label class="numf">ALMA best res ≤ <input type="number" id="f-res" step="0.01" min="0" placeholder="″"> ″</label>
+      <label class="switch"><input type="checkbox" id="f-jwst"> JWST imaging</label>
+      <label class="switch"><input type="checkbox" id="f-hst"> HST imaging</label>
+      <label class="switch"><input type="checkbox" id="f-sphere"> SPHERE</label>
+    </details>
+    <button id="export" class="btn">Download selection (CSV)</button>
+    <p class="ack">Built with the help of Claude (Anthropic). Inspired by the
+      <a href="https://www.circumstellardisks.org/" target="_blank" rel="noopener">Catalog of Circumstellar Disks</a>
+      maintained by Karl Stapelfeldt. Images are from the cited papers; data from VizieR and the ALMA, MAST and ESO archives.
+      Sky-map background: ESA/Gaia/DPAC (CC BY-SA 3.0 IGO).</p>
+  </aside>
+  <main>
+    <!-- ============ GALLERY ============ -->
+    <section id="tab-gallery" class="tab on">
+      <div class="bar">
+        <div class="fld"><span class="lbl">view</span><div class="seg" id="g-mode"><button data-m="cards" class="on">Cards</button><button data-m="wave">By wavelength</button></div></div>
+        <div class="fld"><span class="lbl">wavelengths</span><div id="g-slots" class="pills"></div></div>
+        <div class="fld"><span class="lbl">sort</span><select id="g-sort">
+          <option value="images">most images</option><option value="name">name</option><option value="age">region age</option>
+          <option value="mdust">dust mass</option><option value="class">class</option><option value="region">region</option></select></div>
+        <label class="switch cards-only"><input type="checkbox" id="g-byregion"> group by region</label>
+        <label class="switch wave-only"><input type="checkbox" id="g-reqall"> only disks with all shown</label>
+        <label class="switch wave-only"><input type="checkbox" id="g-names" checked> names</label>
+        <div class="fld wave-only"><span class="lbl">tile size</span><input type="range" id="g-cols" min="50" max="220" value="96"></div>
+        <label class="switch cards-only"><input type="checkbox" id="g-zoom"> zoom on hover</label>
+        <div class="fld cards-only"><span class="lbl">size</span><input type="range" id="g-size" min="100" max="260" value="150"></div>
+        <span class="hint" id="g-count"></span>
+      </div>
+      <div class="scroll" id="gallery"></div>
+    </section>
+    <!-- ============ SKY ============ -->
+    <section id="tab-sky" class="tab">
+      <div class="bar"><div class="fld"><span class="lbl">view</span><select id="skyreg"></select></div>
+        <div class="fld"><span class="lbl">background</span><select id="skysurv"></select></div>
+        <label class="switch"><input type="checkbox" id="skysrc" checked> sources</label>
+        <label class="switch"><input type="checkbox" id="skyguides" checked> guides</label>
+        <span class="hint" id="skyhint"></span></div>
+      <div id="sky"></div>
+    </section>
+    <!-- ============ PROGRAMS ============ -->
+    <section id="tab-programs" class="tab">
+      <div class="bar">
+        <div class="seg" id="p-fac"><button data-f="ALMA" class="on">ALMA</button><button data-f="JWST">JWST</button><button data-f="HST">HST</button><button data-f="SPHERE">SPHERE</button></div>
+        <div class="fld"><span class="lbl">list</span><select id="p-list"><option value="named">named / large programs</option><option value="top">largest programs in this sample</option></select></div>
+        <div class="fld"><span class="lbl">map</span><select id="p-frame"><option value="gal180">Galactic, anticentre</option><option value="gal">Galactic, centre</option><option value="eq">Equatorial</option></select></div>
+        <span class="hint">Click programs to compare them. Counts use the sources in the current sidebar selection.</span>
+      </div>
+      <div class="prog-wrap">
+        <div id="p-cards" class="scroll"></div>
+        <div class="prog-right scroll">
+          <div id="p-sky" class="pane"></div>
+          <div class="prog-plots"><div id="p-class" class="pane"></div><div id="p-region" class="pane"></div></div>
+          <div class="prog-plots"><div id="p-mdust" class="pane"></div><div id="p-res" class="pane"></div></div>
+        </div>
+      </div>
+    </section>
+    <!-- ============ PLOT ============ -->
+    <section id="tab-plot" class="tab">
+      <div class="bar">
+        <div class="fld"><span class="lbl">plot</span><div class="seg" id="p-mode"><button data-m="src" class="on">Sources</button><button data-m="ring">Rings &amp; gaps</button><button data-m="diag">Ring diagram</button></div></div>
+        <div class="fld diag-only"><span class="lbl">sort disks by</span><select id="rd-sort"><option value="Mstar">stellar mass</option><option value="outer">outermost ring</option>
+          <option value="Mdust_Mearth">dust mass</option><option value="region_age">region age</option><option value="name">name</option></select></div>
+        <div class="fld nosrc"><span class="lbl">tracer</span><select id="rd-tr"><option value="dust+co">dust + CO lines</option><option value="dust">dust (continuum)</option>
+          <option value="co">CO isotopologues</option><option value="gas">all gas lines</option><option value="all">everything</option></select></div>
+        <label class="switch diag-only"><input type="checkbox" id="rd-radii" checked> R_dust / R_gas</label>
+        <div class="fld nodiag"><span class="lbl">x</span><div class="row2"><select id="px"></select><label class="switch"><input type="checkbox" id="lx"> log</label></div></div>
+        <div class="fld nodiag"><span class="lbl">y</span><div class="row2"><select id="py"></select><label class="switch"><input type="checkbox" id="ly"> log</label></div></div>
+        <div class="fld nodiag"><span class="lbl">colour</span><select id="pc"></select></div>
+        <label class="switch src-only"><input type="checkbox" id="plim" checked> upper limits</label>
+        <label class="switch diag-only"><input type="checkbox" id="rd-log"> log radius</label>
+        <span class="hint" id="p-hint"></span>
+      </div>
+      <div id="plot" class="pane"></div>
+    </section>
+    <!-- ============ COMPLETENESS ============ -->
+    <section id="tab-regions" class="tab">
+      <p class="hint">Completeness of the <b>current selection</b> (tick only Class II, for example, to get per-class numbers).
+        Denominator = sources in the selection per region.</p>
+      <div id="regplot" class="pane"></div>
+      <div class="scroll"><table id="regtbl"><thead></thead><tbody></tbody></table></div>
+    </section>
+    <!-- ============ TABLE ============ -->
+    <section id="tab-table" class="tab">
+      <div class="bar"><div class="fld"><span class="lbl">columns</span><select id="colset">
+          <option value="basic">basic</option><option value="mm">mm / disk</option>
+          <option value="archive">archive status</option><option value="all">all</option></select></div>
+        <div class="sp"></div><span id="pageinfo" class="hint"></span>
+        <button id="prev" class="btn">◀</button><button id="next" class="btn">▶</button>
+      </div>
+      <div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    </section>
+  </main>
+  <div id="drawer" class="hidden"><button id="close" class="btn">✕</button><div id="dcontent"></div></div>
+</div>
+<div id="lb"><img id="lb-img"><div id="lb-cap"></div></div>
+<script src="app.js"></script>
+</body>
+</html>
