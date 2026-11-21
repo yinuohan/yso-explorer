@@ -601,12 +601,17 @@ function initGallery() {
     const im = e.target.closest('figure, .wt:not(.blank)'); if (im && SID2ROW[im.dataset.sid]) openDrawer(SID2ROW[im.dataset.sid].idx, +im.dataset.k);
   };
 }
+// image order: papers.csv priority (DSHARP 5 > exoALMA/MAPS 4 > targeted high-res 3 > targeted 2 > survey 1), then tracer, then the newer paper
+const imgYear = x => +((String(x.ref || '').match(/(19|20)\d\d/) || [0])[0]);
+const imgPri = (a, b) => +(b.priority || 2) - +(a.priority || 2);
+const imgRank = (a, b) => imgPri(a, b) || (imgYear(b) - imgYear(a));
 function bestImg(sid, slot, used) {
   // headline image: highest-resolution source first (papers.csv 'priority': DSHARP/long baselines > targeted > survey snapshot),
   // then the most square single-disk panel
-  const list = IMGS[sid] || [], sq = x => Math.abs(Math.log(x.aspect || 1)), pr = x => +(x.priority || 2);
-  const c = list.map((x, i) => [x, i]).filter(([x, i]) => !(used && used.has(i)) && slot.tr.includes(x.tracer))
-    .sort((a, b) => pr(b[0]) - pr(a[0]) || sq(a[0]) - sq(b[0]));
+  const list = IMGS[sid] || [], sq = x => Math.abs(Math.log(x.aspect || 1));
+  const c = list.map((x, i) => [x, i]).filter(([x, i]) => !(used && used.has(i)) && slot.tr.includes(x.tracer)).sort((a, b) => imgPri(a[0], b[0])
+    || (slot.tr.indexOf(a[0].tracer) - slot.tr.indexOf(b[0].tracer))      // within a tier: CO before other lines, mm before cm
+    || (imgYear(b[0]) - imgYear(a[0])) || (Math.abs(sq(a[0]) - sq(b[0])) < 0.05 ? 0 : sq(a[0]) - sq(b[0])));   // near-equal shapes: keep paper order
   return c.length ? c[0] : null;
 }
 function renderWave(list) {
@@ -808,7 +813,7 @@ function openDrawer(i, focusK) {
   const coo = `${r.ra.toFixed(5)} ${r.dec >= 0 ? '+' : ''}${r.dec.toFixed(5)}`;
   const kv = (k, v) => (v === '' || v == null ? '' : `<tr><td>${k}</td><td>${v}</td></tr>`);
   let h = `<h2>${r.name}</h2><div class="hint">${r.source_id} · ${coo} · ${(r.aliases || '').split(';').filter(a => a !== r.name).join(' · ')}</div>`;
-  const im = (D.images[r.source_id] || []).map((x, k) => ({ ...x, k })).sort((a, b) => (+b.priority || 2) - (+a.priority || 2));
+  const im = (D.images[r.source_id] || []).map((x, k) => ({ ...x, k })).sort(imgRank);
   if (im.length) {
     const groups = SLOTS.map(sl => [sl, im.filter(x => sl.tr.includes(x.tracer))]).concat([[{ label: 'other', cls: 't-oth' }, im.filter(x => !SLOTS.some(sl => sl.tr.includes(x.tracer)))]]);
     h += `<h3>Images (${im.length})</h3>` + groups.filter(([, l]) => l.length).map(([sl, l]) =>
