@@ -596,9 +596,11 @@ function initGallery() {
   $('#g-zoom').onchange = () => { document.body.classList.toggle('zoom', $('#g-zoom').checked);
     try { localStorage.setItem('yso-zoom', $('#g-zoom').checked ? '1' : '0'); } catch (e) {} };
   document.body.classList.toggle('zoom', $('#g-zoom').checked);
-  $('#gallery').onclick = e => {
-    const nm = e.target.closest('.nm, .more'); if (nm) return openDrawer(+nm.dataset.i);
-    const im = e.target.closest('figure, .wt:not(.blank)'); if (im && SID2ROW[im.dataset.sid]) openDrawer(SID2ROW[im.dataset.sid].idx, +im.dataset.k);
+  $('#gallery').onclick = e => {                 // anywhere on a card or tile opens the details; an image also gets highlighted there
+    if (e.target.closest('a')) return;
+    const im = e.target.closest('figure, .wt'), card = e.target.closest('.card'), sid = (im && im.dataset.sid) || (card && card.dataset.sid);
+    if (!sid || !SID2ROW[sid]) return;
+    openDrawer(SID2ROW[sid].idx, im && im.dataset.k != null ? +im.dataset.k : undefined);
   };
 }
 // image order: papers.csv priority (DSHARP 5 > exoALMA/MAPS 4 > targeted high-res 3 > targeted 2 > survey 1), then tracer, then the newer paper
@@ -624,7 +626,7 @@ function renderWave(list) {
     return `<div class="wcol ${sl.cls}"><h3><i></i>${sl.label}<span>${n} of ${L.length} disks</span></h3><div class="wg" style="grid-template-columns:repeat(auto-fill,minmax(${T}px,1fr))">${L.map(r => {
       const b = bestImg(r.source_id, sl);
       return b ? `<div class="wt" data-sid="${r.source_id}" data-k="${b[1]}" title="${r.name} — ${(b[0].label || '').replace(/"/g, '')} (${shortRef(b[0].ref)})"><img loading="lazy" src="${b[0].file}"><b>${r.name}</b></div>`
-               : `<div class="wt blank" title="${r.name}: no ${sl.label} image"><b>${r.name}</b></div>`; }).join('')}</div></div>`; }).join('')}</div>`
+               : `<div class="wt blank" data-sid="${r.source_id}" title="${r.name}: no ${sl.label} image — click for details"><b>${r.name}</b></div>`; }).join('')}</div></div>`; }).join('')}</div>`
     : '<p class="hint">Select at least one wavelength.</p>';
   $('#g-count').textContent = `${L.length} disks`;
 }
@@ -654,7 +656,7 @@ function cardHTML(r) {
     r.alma_best_res != null && `<span class="chip" title="best ALMA resolution in the archive">ALMA ${fmtNum(r.alma_best_res)}″</span>`,
     ...r.prog.map(p => `<span class="chip prog">${p}</span>`)].filter(Boolean).join('');
   const flag = r.feat.find(f => /streamer|infall/.test(f));
-  return `<article class="card"><div class="ch">
+  return `<article class="card" data-sid="${r.source_id}"><div class="ch">
       <div class="nm" data-i="${r.idx}" title="open details"><b>${r.name}</b>${r.yso_class ? `<span class="cls c${r.cls === '?' ? 'X' : r.cls}">${r.cls}</span>` : ''}${flag ? `<span class="flag">${flag}</span>` : ''}</div>
       <div class="al">${r.region}${R.dist_pc ? ` · ${R.dist_pc} pc · ${R.age_myr} Myr` : ''}</div>
       <div class="chips">${chips}</div></div>

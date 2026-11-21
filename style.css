@@ -94,7 +94,7 @@ th { position:sticky; top:0; background:var(--panel); cursor:pointer; user-selec
 #gallery { --n:3; --aux:1; }
 .card { background:var(--card); border:1px solid var(--bd); border-radius:10px; box-shadow:var(--shadow); padding:10px; transition:box-shadow .15s, transform .15s;
   width:calc(var(--n) * (var(--s) + 6px) + var(--aux) * (var(--s) * .92 + 10px) + 20px); height:calc(var(--s) + 104px); overflow:hidden; max-width:100%; }
-.card:hover { box-shadow:var(--shadow2); transform:translateY(-1px); }
+.card:hover { box-shadow:var(--shadow2); transform:translateY(-1px); } .card, .wt { cursor:pointer; }
 .ch { height:62px; overflow:hidden; margin-bottom:6px; }
 .nm { display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; font-size:13.5px; cursor:pointer; }
 .nm b { font-weight:650; letter-spacing:-.01em; overflow:hidden; text-overflow:ellipsis; } .nm:hover b { color:var(--acc); }
@@ -159,7 +159,7 @@ body.zoom .aux { overflow:visible; }
 .wg { display:grid; gap:3px; }
 .wt { position:relative; aspect-ratio:1/1; border-radius:4px; overflow:hidden; background:#000; cursor:pointer; }
 .wt img { width:100%; height:100%; object-fit:contain; display:block; }
-.wt.blank { background:var(--ph); border:1px dashed var(--bd2); cursor:default; }
+.wt.blank { background:var(--ph); border:1px dashed var(--bd2); }
 .wt b { position:absolute; left:0; right:0; bottom:0; font-size:9.5px; font-weight:600; line-height:13px; padding:1px 4px; color:#fff;
   background:linear-gradient(transparent, rgba(0,0,0,.78)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .wt.blank b { color:var(--fg3); background:none; } .nolab .wt b { display:none; }
